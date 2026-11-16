@@ -225,5 +225,5 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Target": "≥ 9.0%",
             "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
         }
-        ]
-        st.table(pd.DataFrame(markedness_data))
+    ]
+    st.table(pd.DataFrame(markedness_data))
