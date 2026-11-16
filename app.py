@@ -43,9 +43,10 @@ st.title("AcademicWeight.AI: Multi-Factor Text Markedness Analysis")
 st.write("Analytical system for academic discourse alignment, syntactic dependency balance, and lexical-stylistic density scoring.")
 
 text_input = st.text_area(
-    "Paste the abstract, introduction or full text of your research paper here:", 
-    "This paper investigates impoliteness and value homophily in the context of YouTube-based ideological discussions beneath the videos critical towards environmental activism. Drawing on the idea of rapport management, the study finds a remarkable scale of homophily as the postings follow recurrent patterns of face and sociality rights attacks echoing the same point of view.",
-    height=150
+    "Paste the abstract, introduction or full text of your research paper here:",
+    value="",
+    placeholder="Paste your academic abstract, introduction, or manuscript excerpt here (in English or Russian) to evaluate syntactic balance, lexical markedness, and Predictive Academic Standard Index (PASI)...",
+    height=180
 )
 
 col_config_1, col_config_2 = st.columns(2)
