@@ -1,19 +1,17 @@
 import streamlit as st
 import spacy
-from spacy.cli import download
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching & auto-download of language models
+# 1. Reliable caching of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
     try:
         return spacy.load(model_name)
     except OSError:
-        with st.spinner(f"Downloading language model '{model_name}' (first run only)..."):
-            download(model_name)
-        return spacy.load(model_name)
+        st.error(f"Model '{model_name}' is not installed. Check requirements.txt.")
+        return None
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
@@ -21,7 +19,7 @@ st.title("AcademicWeight.AI: Multi-Factor Text Markedness Analysis")
 st.write("Analytical system for academic discourse alignment, syntactic dependency balance, and lexical-stylistic density scoring.")
 
 text_input = st.text_area(
-    "Paste the abstract, introduction or  full text of your research paper here:", 
+    "Paste the abstract, introduction or full text of your research paper here:", 
     "This paper investigates impoliteness and value homophily in the context of YouTube-based ideological discussions beneath the videos critical towards environmental activism. Drawing on the idea of rapport management, the study finds a remarkable scale of homophily as the postings follow recurrent patterns of face and sociality rights attacks echoing the same point of view.",
     height=150
 )
@@ -51,7 +49,6 @@ with col_config_2:
 if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     nlp = load_spacy_model(language_opt)
     if nlp is None:
-        st.error("Failed to initialize the NLP pipeline.")
         st.stop()
         
     doc = nlp(text_input)
@@ -69,7 +66,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     m_semantic = sum(1 for t in tokens_no_punct if t.pos_ == "NOUN") / total_tokens
     m_implicational = sum(1 for t in tokens_no_punct if t.head != t and any(not c.is_punct for c in t.children)) / total_tokens
     
-    # Exact MDD and MR calculation strictly per word within each sentence (without punctuation distortion)
+    # Exact MDD and MR calculation strictly per word within each sentence
     syntax_labels = {"acl", "advcl", "parataxis", "dislocated", "appos", "conj"}
     syntax_marked_cnt = 0
     total_dist = 0
@@ -120,19 +117,17 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         opt_mdd_min, opt_mdd_max = 2.08, 2.68
         target_prod, target_styl, target_mat = 0.56, 0.135, 0.19
         prof_name = "social sciences"
-    else: # Humanities / Philology (Empirical benchmark based on OpenAlex 2021-2023 corpus)
+    else:
         mu_mdd, mu_mr = 2.42, 0.088
         opt_mdd_min, opt_mdd_max = 2.12, 2.72
         target_prod, target_styl, target_mat = 0.565, 0.135, 0.185
         prof_name = "humanities (Philology)"
 
-    # 5. Two-component PASI calculation:
-    # Component A: Syntactic arc balance (Gaussian norm corridor, 40% weight)
+    # 5. Two-component PASI calculation
     sigma_mdd = 0.35
     sigma_mr = 0.038
     syn_balance = np.exp(- ( ((mdd - mu_mdd) ** 2) / (2 * (sigma_mdd ** 2)) + ((mr - mu_mr) ** 2) / (2 * (sigma_mr ** 2)) ))
     
-    # Component B: Lexical-stylistic density (Sigmoids on significant predictors, 60% weight)
     s_prod = 1.0 / (1.0 + np.exp(-22.0 * (m_productive - target_prod)))
     s_styl = 1.0 / (1.0 + np.exp(-30.0 * (m_stylistic - target_styl)))
     s_mat  = 1.0 / (1.0 + np.exp(-20.0 * (m_material - target_mat)))
@@ -141,7 +136,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     pasi_raw = 100.0 * (0.40 * syn_balance + 0.60 * markedness_density)
     pasi_score = round(max(5.0, min(pasi_raw, 100.0)), 1)
     
-    # 6. Smart diagnostics and actionable recommendations for the author
+    # 6. Smart diagnostics and actionable recommendations
     issues = []
     if mdd < opt_mdd_min:
         issues.append(f"Syntactic arcs are too short (MDD = {mdd} < {opt_mdd_min}): sentences appear fragmented.")
@@ -186,7 +181,6 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.metric("Markedness Density Score", f"{round(markedness_density * 100, 1)}%")
 
     # Syntactic & Semantic Passport
-        # Syntactic & Semantic Passport
     st.subheader("📋 Syntactic & Semantic Markedness Profile (7 Dimensions)")
     markedness_data = [
         {
@@ -214,23 +208,22 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Linguistic Indicator": "Complex UD dependency edges (acl, advcl, parataxis, appos, conj)"
         },
         {
-            "Markedness Type": "5. Productive (Mprod)", 
-            "Value": f"{round(m_productive * 100, 1)}%", 
-            "Target": f"≥ {round(target_prod * 100, 1)}%", 
-            "Linguistic Indicator": "Lexical word-formative variation (Lemma Type-Token Ratio)"
-        },
-        {
-            "Markedness Type": "6. Stylistic (Mstyl)", 
-            "Value": f"{round(m_stylistic * 100, 1)}%", 
-            "Target": f"≥ {round(target_styl * 100, 1)}%", 
-            "Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
-        },
-        {
-            "Markedness Type": "7. Statistical (Mstat)", 
-            "Value": f"{round(m_statistical * 100, 1)}%", 
-            "Target": "≥ 9.0%", 
-            "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
-        }
-    ]
-    st.table(pd.DataFrame(markedness_data))
-
+"Markedness Type": "5. Productive (Mprod)",
+"Value": f"{round(m_productive * 100, 1)}%",
+"Target": f"≥ {round(target_prod * 100, 1)}%",
+"Linguistic Indicator": "Lexical word-formative variation (Lemma Type-Token Ratio)"
+},
+{
+"Markedness Type": "6. Stylistic (Mstyl)",
+"Value": f"{round(m_stylistic * 100, 1)}%",
+"Target": f"≥ {round(target_styl * 100, 1)}%",
+"Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
+},
+{
+"Markedness Type": "7. Statistical (Mstat)",
+"Value": f"{round(m_statistical * 100, 1)}%",
+"Target": "≥ 9.0%",
+"Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
+}
+]
+st.table(pd.DataFrame(markedness_data))
