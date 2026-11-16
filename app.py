@@ -1,18 +1,26 @@
 import streamlit as st
 import spacy
-from spacy.cli import download
+import subprocess
+import sys
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching and automatic downloading of language models
+# 1. Reliable caching and user-space installation of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
     try:
         return spacy.load(model_name)
     except OSError:
-        with st.spinner(f"Downloading language model ({model_name})... Please wait."):
-            download(model_name)
+        with st.spinner(f"Installing {model_name} (one-time setup)..."):
+            url = (
+                "https://github.com"
+                "en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+                if lang_code == "en"
+                else "https://github.com"
+                "ru_core_news_md-3.8.0/ru_core_news_md-3.8.0-py3-none-any.whl"
+            )
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", url])
         return spacy.load(model_name)
 
 # 2. UI Configuration
