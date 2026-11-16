@@ -1,21 +1,31 @@
-import subprocess
-import sys
+import os
+import urllib.request
+import zipfile
 import streamlit as st
 import spacy
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching & uv-compatible download of language models
+# 1. Reliable caching & sandboxed model loader (works on Streamlit Cloud without pip/uv)
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
-    whl_url = f"https://huggingface.co{model_name}/resolve/main/{model_name}-any-py3-none-any.whl"
     try:
         return spacy.load(model_name)
     except OSError:
-        with st.spinner(f"Downloading language model '{model_name}' (first run only, ~15 sec)..."):
-            subprocess.check_call(["uv", "pip", "install", "--python", sys.executable, whl_url])
-        return spacy.load(model_name)
+        extract_dir = f"/tmp/{model_name}_pkg"
+        if not os.path.exists(extract_dir):
+            with st.spinner(f"Downloading language model '{model_name}' (first run only, ~15 sec)..."):
+                whl_url = f"https://huggingface.co{model_name}/resolve/main/{model_name}-any-py3-none-any.whl"
+                whl_path = f"/tmp/{model_name}.whl"
+                urllib.request.urlretrieve(whl_url, whl_path)
+                with zipfile.ZipFile(whl_path, "r") as zf:
+                    zf.extractall(extract_dir)
+        for root, dirs, files in os.walk(extract_dir):
+            if "config.cfg" in files and "meta.json" in files:
+                return spacy.load(root)
+        st.error(f"Failed to locate model files for '{model_name}'.")
+        return None
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
