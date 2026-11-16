@@ -141,7 +141,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     s_mat  = 1.0 / (1.0 + np.exp(-20.0 * (m_material - target_mat)))
     markedness_density = 0.50 * s_prod + 0.30 * s_styl + 0.20 * s_mat
     
-    pasi_raw = 100.0 * (0.40 * syn_equilibrium + 0.60 * markedness_density)
+    pasi_raw = 100.0 * (0.40 * syn_balance + 0.60 * markedness_density)
     pasi_score = round(max(5.0, min(pasi_raw, 100.0)), 1)
     
     # 6. Smart diagnostics and actionable recommendations for the author
@@ -185,7 +185,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.metric("Markedness Ratio (MR)", f"{round(mr * 100, 1)}%", help="Optimal corridor: 5.0% - 12.6%")
         
     with col_res_3:
-        st.metric("Syntactic Balance Score", f"{round(syn_equilibrium * 100, 1)}%")
+        st.metric("Syntactic Balance Score", f"{round(syn_balance * 100, 1)}%")
         st.metric("Markedness Density Score", f"{round(markedness_density * 100, 1)}%")
 
     # Syntactic & Semantic Passport
