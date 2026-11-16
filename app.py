@@ -8,6 +8,7 @@ import numpy as np
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
     return spacy.load(model_name)
+    
     except OSError:
         extract_dir = f"/tmp/{model_name}_pkg"
         if not os.path.exists(extract_dir):
