@@ -9,12 +9,8 @@ import numpy as np
 # 1. Reliable caching and direct extraction to /tmp
 @st.cache_resource
 def load_spacy_model(lang_code):
-    if lang_code == "en":
-        model_name = "en_core_web_sm"
-        version = "3.8.0"
-    else:
-        model_name = "ru_core_news_md"
-        version = "3.8.0"
+    model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
+    version = "3.8.0"
 
     extract_dir = f"/tmp/{model_name}"
     model_path = os.path.join(extract_dir, model_name, f"{model_name}-{version}")
@@ -22,10 +18,17 @@ def load_spacy_model(lang_code):
     if not os.path.exists(model_path):
         with st.spinner(f"Downloading {model_name} (one-time setup)..."):
             whl_path = f"/tmp/{model_name}.whl"
-            url = (
-                f"https://github.com"
-                f"{model_name}-{version}/{model_name}-{version}-py3-none-any.whl"
-            )
+            parts = [
+                "https://",
+                "://github.com",
+                "explosion/",
+                "spacy-models/",
+                "releases/",
+                "download/",
+                f"{model_name}-{version}/",
+                f"{model_name}-{version}-py3-none-any.whl",
+            ]
+            url = "".join(parts)
             urllib.request.urlretrieve(url, whl_path)
             with zipfile.ZipFile(whl_path, "r") as zf:
                 zf.extractall(extract_dir)
