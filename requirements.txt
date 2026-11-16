@@ -5,3 +5,5 @@ numpy>=1.26.0
 scipy>=1.11.0
 openpyxl>=3.1.2
 requests>=2.31.0
+pymorphy3
+pymorphy3-dicts-ru
