@@ -1,22 +1,19 @@
 import streamlit as st
 import spacy
+from spacy.cli import download
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching of language models
+# 1. Reliable caching & auto-download of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
-    if lang_code == "en":
-        try:
-            return spacy.load("en_core_web_sm")
-        except OSError:
-            st.error("English model 'en_core_web_sm' is missing. Run: python -m spacy download en_core_web_sm")
-    elif lang_code == "ru":
-        try:
-            return spacy.load("ru_core_news_md")
-        except OSError:
-            st.error("Russian model 'ru_core_news_md' is missing. Run: python -m spacy download ru_core_news_md")
-    return None
+    model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
+    try:
+        return spacy.load(model_name)
+    except OSError:
+        with st.spinner(f"Downloading language model '{model_name}' (first run only)..."):
+            download(model_name)
+        return spacy.load(model_name)
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
