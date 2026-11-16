@@ -18,7 +18,7 @@ def load_spacy_model(lang_code):
     if not os.path.exists(model_path):
         with st.spinner(f"Downloading {model_name} (one-time setup)..."):
             whl_path = f"/tmp/{model_name}.whl"
-                       parts = [
+            parts = [
                 "https://",
                 "github",
                 ".com/",
