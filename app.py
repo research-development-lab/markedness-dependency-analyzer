@@ -1,27 +1,37 @@
 import streamlit as st
 import spacy
-import subprocess
-import sys
+import urllib.request
+import zipfile
+import os
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching and user-space installation of language models
+# 1. Reliable caching and direct extraction to /tmp
 @st.cache_resource
 def load_spacy_model(lang_code):
-    model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
-    try:
-        return spacy.load(model_name)
-    except OSError:
-        with st.spinner(f"Installing {model_name} (one-time setup)..."):
+    if lang_code == "en":
+        model_name = "en_core_web_sm"
+        version = "3.8.0"
+    else:
+        model_name = "ru_core_news_md"
+        version = "3.8.0"
+
+    extract_dir = f"/tmp/{model_name}"
+    model_path = os.path.join(extract_dir, model_name, f"{model_name}-{version}")
+
+    if not os.path.exists(model_path):
+        with st.spinner(f"Downloading {model_name} (one-time setup)..."):
+            whl_path = f"/tmp/{model_name}.whl"
             url = (
-                "https://github.com"
-                "en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
-                if lang_code == "en"
-                else "https://github.com"
-                "ru_core_news_md-3.8.0/ru_core_news_md-3.8.0-py3-none-any.whl"
+                f"https://github.com"
+                f"{model_name}-{version}/{model_name}-{version}-py3-none-any.whl"
             )
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", url])
-        return spacy.load(model_name)
+            urllib.request.urlretrieve(url, whl_path)
+            with zipfile.ZipFile(whl_path, "r") as zf:
+                zf.extractall(extract_dir)
+            os.remove(whl_path)
+
+    return spacy.load(model_path)
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
