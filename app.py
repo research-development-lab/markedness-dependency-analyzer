@@ -1,17 +1,13 @@
-import os
-import urllib.request
-import zipfile
 import streamlit as st
 import spacy
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching & sandboxed model loader (works on Streamlit Cloud without pip/uv)
+# 1. Reliable caching of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
-    try:
-        return spacy.load(model_name)
+    return spacy.load(model_name)
     except OSError:
         extract_dir = f"/tmp/{model_name}_pkg"
         if not os.path.exists(extract_dir):
