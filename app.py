@@ -208,22 +208,22 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Linguistic Indicator": "Complex UD dependency edges (acl, advcl, parataxis, appos, conj)"
         },
         {
-"Markedness Type": "5. Productive (Mprod)",
-"Value": f"{round(m_productive * 100, 1)}%",
-"Target": f"≥ {round(target_prod * 100, 1)}%",
-"Linguistic Indicator": "Lexical word-formative variation (Lemma Type-Token Ratio)"
-},
-{
-"Markedness Type": "6. Stylistic (Mstyl)",
-"Value": f"{round(m_stylistic * 100, 1)}%",
-"Target": f"≥ {round(target_styl * 100, 1)}%",
-"Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
-},
-{
-"Markedness Type": "7. Statistical (Mstat)",
-"Value": f"{round(m_statistical * 100, 1)}%",
-"Target": "≥ 9.0%",
-"Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
-}
-]
-st.table(pd.DataFrame(markedness_data))
+            "Markedness Type": "5. Productive (Mprod)",
+            "Value": f"{round(m_productive * 100, 1)}%",
+            "Target": f"≥ {round(target_prod * 100, 1)}%",
+            "Linguistic Indicator": "Lexical word-formative variation (Lemma Type-Token Ratio)"
+        },
+        {
+            "Markedness Type": "6. Stylistic (Mstyl)",
+            "Value": f"{round(m_stylistic * 100, 1)}%",
+            "Target": f"≥ {round(target_styl * 100, 1)}%",
+            "Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
+        },
+        {
+            "Markedness Type": "7. Statistical (Mstat)",
+            "Value": f"{round(m_statistical * 100, 1)}%",
+            "Target": "≥ 9.0%",
+            "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
+        }
+        ]
+        st.table(pd.DataFrame(markedness_data))
