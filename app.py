@@ -5,15 +5,16 @@ import spacy
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching & safe subprocess download of language models
+# 1. Reliable caching & uv-compatible download of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
+    whl_url = f"https://huggingface.co{model_name}/resolve/main/{model_name}-any-py3-none-any.whl"
     try:
         return spacy.load(model_name)
     except OSError:
-        with st.spinner(f"Installing language model '{model_name}' (first run only, ~30 sec)..."):
-            subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+        with st.spinner(f"Downloading language model '{model_name}' (first run only, ~15 sec)..."):
+            subprocess.check_call(["uv", "pip", "install", "--python", sys.executable, whl_url])
         return spacy.load(model_name)
 
 # 2. UI Configuration
