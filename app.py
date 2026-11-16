@@ -1,17 +1,20 @@
+import subprocess
+import sys
 import streamlit as st
 import spacy
 import pandas as pd
 import numpy as np
 
-# 1. Reliable caching of language models
+# 1. Reliable caching & safe subprocess download of language models
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
     try:
         return spacy.load(model_name)
     except OSError:
-        st.error(f"Model '{model_name}' is not installed. Check requirements.txt.")
-        return None
+        with st.spinner(f"Installing language model '{model_name}' (first run only, ~30 sec)..."):
+            subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+        return spacy.load(model_name)
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
@@ -48,9 +51,6 @@ with col_config_2:
 # 3. Main Analysis Execution Engine
 if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     nlp = load_spacy_model(language_opt)
-    if nlp is None:
-        st.stop()
-        
     doc = nlp(text_input)
     
     # Base tokens excluding punctuation and whitespace
@@ -225,5 +225,5 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Target": "≥ 9.0%",
             "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
         }
-     ]
-    st.table(pd.DataFrame(markedness_data))
+        ]
+        st.table(pd.DataFrame(markedness_data))
