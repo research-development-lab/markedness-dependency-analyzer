@@ -7,22 +7,7 @@ import numpy as np
 @st.cache_resource
 def load_spacy_model(lang_code):
     model_name = "en_core_web_sm" if lang_code == "en" else "ru_core_news_md"
-    return spacy.load(model_name)
-    
-    except OSError:
-        extract_dir = f"/tmp/{model_name}_pkg"
-        if not os.path.exists(extract_dir):
-            with st.spinner(f"Downloading language model '{model_name}' (first run only, ~15 sec)..."):
-                whl_url = f"https://huggingface.co{model_name}/resolve/main/{model_name}-any-py3-none-any.whl"
-                whl_path = f"/tmp/{model_name}.whl"
-                urllib.request.urlretrieve(whl_url, whl_path)
-                with zipfile.ZipFile(whl_path, "r") as zf:
-                    zf.extractall(extract_dir)
-        for root, dirs, files in os.walk(extract_dir):
-            if "config.cfg" in files and "meta.json" in files:
-                return spacy.load(root)
-        st.error(f"Failed to locate model files for '{model_name}'.")
-        return None
+    return spacy.load(model_name)  
 
 # 2. UI Configuration
 st.set_page_config(page_title="AcademicWeight.AI", layout="wide")
