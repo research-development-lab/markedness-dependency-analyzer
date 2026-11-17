@@ -151,7 +151,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     sigma_imp = 0.050
     sigma_sem = 0.050
 
-    # Component 1: Syntactic Equilibrium (MDD + Msyn + Mimp)
+    # Component 1: Syntactic Balance (MDD + Msyn + Mimp)
     syn_balance = np.exp(-(
         ((mdd - mu_mdd) ** 2) / (2 * (sigma_mdd ** 2)) +
         ((m_abstract_syntax - mu_syn) ** 2) / (2 * (sigma_syn ** 2)) +
@@ -221,8 +221,8 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.metric("Mean Dependency Distance (MDD)", f"{mdd} tokens", help=f"Optimal corridor for {prof_name}: {opt_mdd_min} - {opt_mdd_max}")
         st.metric("Abstract-Syntactic Ratio (Msyn / MR)", f"{round(m_abstract_syntax * 100, 1)}%", help=f"Optimal corridor for {prof_name}: {syn_min}% - {syn_max}%")
     with col_res_3:
-        st.metric("Syntactic Equilibrium Score", f"{round(syn_balance * 100, 1)}%")
-        st.metric("Markedness Density Score", f"{round(markedness_density * 100, 1)}%")
+        st.metric("Syntactic Balance Index", f"{round(syn_balance * 100, 1)}%")
+        st.metric("Markedness Density Index", f"{round(markedness_density * 100, 1)}%")
     # Syntactic & Semantic Profile
     st.subheader("📋 7-Dimensional Syntactic & Semantic Markedness Profile")
     markedness_data = [
