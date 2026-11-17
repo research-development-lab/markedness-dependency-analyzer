@@ -195,8 +195,10 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.info(f"💡 **Actionable Feedback:** {recommendation}")
         
     with col_res_2:
-        st.metric("Mean Dependency Distance (MDD)", f"{mdd} tokens", help="Optimal corridor: 2.12 - 2.72")
-        st.metric("Markedness Ratio (MR)", f"{round(mr * 100, 1)}%", help="Optimal corridor: 5.0% - 12.6%")
+        mr_min = round((mu_mr - sigma_mr) * 100, 1)
+        mr_max = round((mu_mr + sigma_mr) * 100, 1)
+        st.metric("Mean Dependency Distance (MDD)", f"{mdd} tokens", help=f"Optimal corridor: {opt_mdd_min} - {opt_mdd_max}")
+        st.metric("Markedness Ratio (MR)", f"{round(mr * 100, 1)}%", help=f"Optimal corridor: {mr_min}% - {mr_max}%")
         
     with col_res_3:
         st.metric("Syntactic Balance Score", f"{round(syn_balance * 100, 1)}%")
