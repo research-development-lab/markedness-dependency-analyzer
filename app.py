@@ -106,8 +106,17 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     mdd = round(total_dist / num_rel, 3) if num_rel > 0 else 0.0
     m_abstract_syntax = syntax_marked_cnt / num_rel if num_rel > 0 else 0.0
     
-    # 5. Productive: Lemma Type-Token Ratio
-    m_productive = len(set(t.lemma_.lower() for t in tokens_no_punct)) / total_tokens
+        # 5. Productive: Length-Invariant Lemma MATTR (Moving-Average Type-Token Ratio, window = 200)
+    lemmas = [t.lemma_.lower() for t in tokens_no_punct]
+    window_size = 200
+    if total_tokens <= window_size:
+        m_productive = len(set(lemmas)) / total_tokens
+    else:
+        ttr_windows = [
+            len(set(lemmas[i : i + window_size])) / window_size
+            for i in range(total_tokens - window_size + 1)
+        ]
+        m_productive = sum(ttr_windows) / len(ttr_windows)
     # 6. Stylistic: qualifying modifiers (ADJ, ADV)
     m_stylistic = sum(1 for t in tokens_no_punct if t.pos_ in ["ADJ", "ADV"]) / total_tokens
     # 7. Statistical: extra-long specialized composites (>10 chars)
