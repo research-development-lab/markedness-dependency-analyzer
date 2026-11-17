@@ -264,9 +264,10 @@ if __name__ == "__main__":
                     })
                 target_p_fdr = benjamini_hochberg(target_p_raw)
                 for idx, tr in enumerate(temp_rows):
-                tr["p_value_FDR"] = target_p_fdr[idx]
-                tr["Significant_raw_0.05"] = "Yes" if tr["p_value_raw"] < 0.05 else "No"
-                corr_rows.append(tr)
+                    tr["p_value_FDR"] = target_p_fdr[idx]
+                    tr["Significant_raw_0.05"] = "Yes" if tr["p_value_raw"] < 0.05 else "No"
+                    corr_rows.append(tr)
+                    
             df_spearman = pd.DataFrame(corr_rows)
             for _, r in df_spearman.iterrows():
                 sig_mark = "*" if r["p_value_raw"] < 0.05 else " "
