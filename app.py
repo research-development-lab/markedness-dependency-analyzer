@@ -229,6 +229,14 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         target_prod = 0.650
     else:
         scope_label = "Full Text / Clean Sections"
+   
+    # 4c. Языковая адаптация (Русский язык имеет более длинные дуги MDD и выше Msyn)
+    if language_opt == "ru":
+        mu_mdd += 0.20
+        opt_mdd_min += 0.20
+        opt_mdd_max += 0.20
+        mu_syn += 0.015
+        mu_sem += 0.015  # В русском научном стиле выше доля отглагольных существительных
 
     # 5. Full 7-Metric Two-Component PASI Calculation
     sigma_mdd = 0.35
@@ -244,11 +252,29 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     ))
     
     # Component 2: Markedness Density (Mprod + Mstyl + Mmat + Msem + Mstat)
+    # Upper cognitive thresholds to penalize lexical overload / nominalization clutter
+    max_styl = target_styl + 0.08
+    max_stat = target_stat + 0.07
+
     s_prod = 1.0 / (1.0 + np.exp(-22.0 * (m_productive - target_prod)))
-    s_styl = 1.0 / (1.0 + np.exp(-30.0 * (m_stylistic - target_styl)))
     s_mat  = 1.0 / (1.0 + np.exp(-25.0 * (m_material - target_mat)))
     s_sem  = np.exp(-((m_semantic - mu_sem) ** 2) / (2 * (sigma_sem ** 2)))
-    s_stat = 1.0 / (1.0 + np.exp(-25.0 * (m_statistical - target_stat)))
+
+    # Asymmetric plateau for Stylistic Markedness (penalizes both deficit and modifier overload)
+    if m_stylistic < target_styl:
+        s_styl = 1.0 / (1.0 + np.exp(-30.0 * (m_stylistic - target_styl)))
+    elif m_stylistic > max_styl:
+        s_styl = np.exp(-((m_stylistic - max_styl) ** 2) / (2 * (0.04 ** 2)))
+    else:
+        s_styl = 1.0
+
+    # Asymmetric plateau for Statistical Markedness (penalizes excessive heavy composites)
+    if m_statistical < target_stat:
+        s_stat = 1.0 / (1.0 + np.exp(-25.0 * (m_statistical - target_stat)))
+    elif m_statistical > max_stat:
+        s_stat = np.exp(-((m_statistical - max_stat) ** 2) / (2 * (0.035 ** 2)))
+    else:
+        s_stat = 1.0
 
     markedness_density = (
         0.35 * s_prod +
@@ -301,6 +327,8 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     # 6. Stylistic Markedness (Mstyl)
     if m_stylistic < target_styl:
         issues.append(f"Low stylistic markedness (Mstyl = {round(m_stylistic * 100, 1)}% < {round(target_styl * 100, 1)}%): add precise analytical qualifiers (adjectives/adverbs).")
+    elif m_stylistic > max_styl:
+        issues.append(f"Excessive modifier density (Mstyl = {round(m_stylistic * 100, 1)}% > {round(max_styl * 100, 1)}%): reduce redundant adjectives and adverbs to prevent wordiness.")
 
     # 7. Material Markedness (Mmat)
     if m_material < target_mat:
@@ -309,12 +337,18 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     # 8. Statistical Markedness (Mstat)
     if m_statistical < target_stat:
         issues.append(f"Low composite density (Mstat = {round(m_statistical * 100, 1)}% < {round(target_stat * 100, 1)}%): include domain-specific compound terms ({stat_label}).")
+    elif m_statistical > max_stat:
+        issues.append(f"Overload of extra-long words (Mstat = {round(m_statistical * 100, 1)}% > {round(max_stat * 100, 1)}%): replace overly heavy morphological composites with clearer phrasing.")
 
     # --- Status & Recommendation Assembly ---
-    if pasi_score >= 72.0 and len(issues) == 0:
+    if pasi_score >= 72.0:
         status = f"✓ High Academic Standard (Optimal Balance & Rich 7-Factor Markedness for {prof_name} — {scope_label})"
         color_box = st.success
-        recommendation = "Excellent balance across all 7 markedness dimensions and syntactic dependency mapping."
+        if len(issues) == 0:
+            recommendation = "Excellent balance across all 7 markedness dimensions and syntactic dependency mapping."
+        else:
+            formatted_issues = "\n".join(f"- {issue}" for issue in issues)
+            recommendation = f"Strong overall academic weight, with minor areas for further lexical refinement:\n{formatted_issues}"
     elif pasi_score >= 58.0:
         status = f"⚠️ Moderate Academic Weight (Partial Imbalance in {prof_name} — {scope_label})"
         color_box = st.warning
@@ -328,6 +362,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         color_box = st.error
         formatted_issues = "\n".join(f"- {issue}" for issue in issues)
         recommendation = f"Substantial revision recommended:\n{formatted_issues}"
+
 
     # 7. UI Metrics & Report Rendering
     st.subheader(f"📊 Multi-Factor Analysis Results ({total_tokens} valid words | MATTR window = {window_size})")
@@ -400,16 +435,17 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         {
             "Markedness Type": "6. Stylistic (Mstyl)",
             "Value": f"{round(m_stylistic * 100, 1)}%",
-            "Target": f"≥ {round(target_styl * 100, 1)}%",
-            "Status": get_min_status(m_stylistic, target_styl),
+            "Target": f"{round(target_styl * 100, 1)}% – {round(max_styl * 100, 1)}%",
+            "Status": get_range_status(m_stylistic, target_styl, max_styl),
             "Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
         },
         {
             "Markedness Type": "7. Statistical (Mstat)",
             "Value": f"{round(m_statistical * 100, 1)}%",
-            "Target": f"≥ {round(target_stat * 100, 1)}%",
-            "Status": get_min_status(m_statistical, target_stat),
+            "Target": f"{round(target_stat * 100, 1)}% – {round(max_stat * 100, 1)}%",
+            "Status": get_range_status(m_statistical, target_stat, max_stat),
             "Linguistic Indicator": f"Concentration of extra-long specialized composites ({stat_label})"
         }
+
     ]
     st.table(pd.DataFrame(markedness_data))
