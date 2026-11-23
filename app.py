@@ -68,9 +68,9 @@ with col_config_3:
     text_scope = st.selectbox(
         "Select text section / scope:",
         [
-            "Full Text (Complete Paper)",
-            "Abstract (150–300 words)",
-            "Introduction / Literature Review"
+            "Full Text / Clean Sections (1,500–5,000+ words)",
+            "Introduction / Literature Review (700–3,000 words)",
+            "Abstract (150–350 words)"
         ]
     )
 
@@ -88,6 +88,22 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     tokens_words = [t for t in doc if t.is_alpha]
     total_tokens = len(tokens_words)
     
+    # Soft word-count validation against corpus calibration ranges
+    if "Abstract" in text_scope and total_tokens > 400:
+        st.warning(
+            f"⚠️ Word count notice: You entered {total_tokens} words, which exceeds a typical Abstract (150–350 words). "
+            "Consider switching the scope to 'Introduction / Literature Review' or 'Full Text' for accurate calibration."
+        )
+    elif "Introduction" in text_scope and (total_tokens < 500 or total_tokens > 3500):
+        st.warning(
+            f"⚠️ Word count notice: Your text has {total_tokens} words (corpus benchmark for Intro/LitReview is 700–3,000 words, centered at ~1,200 words)."
+        )
+    elif "Full Text" in text_scope and total_tokens < 700:
+        st.warning(
+            f"⚠️ Word count notice: Your text has only {total_tokens} words (clean full-text corpus benchmark starts at 700+ words). "
+            "If this is an abstract or short section, select the corresponding scope above."
+        )
+
     if total_tokens < 20:
         st.warning("Please enter at least 20 valid words for reliable syntactic and lexical analysis.")
         st.stop()
@@ -134,9 +150,10 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     mdd = round(total_dist / num_rel, 3) if num_rel > 0 else 0.0
     m_abstract_syntax = syntax_marked_cnt / num_rel if num_rel > 0 else 0.0
     
-    # 5. Productive: Length-Invariant Lemma MATTR (window = 50 for scale invariance across Abstracts & Full Texts)
+    # 5. Productive: Lemma MATTR (window=50 for short Abstracts; window=200 for Sections & Full Text)
     lemmas = [t.lemma_.lower() for t in tokens_words]
-    window_size = 50
+    window_size = 50 if "Abstract" in text_scope else 200
+
     if total_tokens <= window_size:
         m_productive = len(set(lemmas)) / total_tokens
     else:
