@@ -273,50 +273,73 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     with col_res_3:
         st.metric("Syntactic Balance Index", f"{round(syn_balance * 100, 1)}%")
         st.metric("Markedness Density Index", f"{round(markedness_density * 100, 1)}%")
-    # Syntactic & Semantic Profile
+        # Syntactic & Semantic Profile (Synchronized with 7-Factor Diagnostics)
     st.subheader("📋 7-Dimensional Syntactic & Semantic Markedness Profile")
+
+    sem_low, sem_high = max(0.0, mu_sem - sigma_sem), mu_sem + sigma_sem
+    imp_low, imp_high = max(0.0, mu_imp - sigma_imp), mu_imp + sigma_imp
+    syn_low, syn_high = max(0.0, mu_syn - sigma_syn), mu_syn + sigma_syn
+
+    def get_range_status(val, low, high):
+        if val < low:
+            return "⚠️ Low"
+        elif val > high:
+            return "⚠️ High"
+        return "✓ Optimal"
+
+    def get_min_status(val, target):
+        return "✓ Optimal" if val >= target else "⚠️ Below target"
+
     markedness_data = [
         {
             "Markedness Type": "1. Material (Mmat)",
             "Value": f"{round(m_material * 100, 1)}%",
             "Target": f"≥ {round(target_mat * 100, 1)}%",
+            "Status": get_min_status(m_material, target_mat),
             "Linguistic Indicator": "Medium-long academic terms (9–10 characters)"
         },
         {
             "Markedness Type": "2. Semantic (Msem)",
             "Value": f"{round(m_semantic * 100, 1)}%",
-            "Target": f"~{round(mu_sem * 100, 1)}%",
+            "Target": f"{round(sem_low * 100, 1)}% – {round(sem_high * 100, 1)}%",
+            "Status": get_range_status(m_semantic, sem_low, sem_high),
             "Linguistic Indicator": "Discourse nominal density (Substantivity ratio / NOUN tag)"
         },
         {
             "Markedness Type": "3. Implicational (Mimp)",
             "Value": f"{round(m_implicational * 100, 1)}%",
-            "Target": f"~{round(mu_imp * 100, 1)}%",
+            "Target": f"{round(imp_low * 100, 1)}% – {round(imp_high * 100, 1)}%",
+            "Status": get_range_status(m_implicational, imp_low, imp_high),
             "Linguistic Indicator": "Hierarchical depth of dependent nodes opening new valencies"
         },
         {
             "Markedness Type": "4. Abstract-Syntactic (Msyn)",
             "Value": f"{round(m_abstract_syntax * 100, 1)}%",
-            "Target": f"{round(mu_syn * 100, 1)}%",
+            "Target": f"{round(syn_low * 100, 1)}% – {round(syn_high * 100, 1)}%",
+            "Status": get_range_status(m_abstract_syntax, syn_low, syn_high),
             "Linguistic Indicator": "Complex UD dependency edges (acl, advcl, parataxis, appos, conj)"
         },
         {
             "Markedness Type": "5. Productive (Mprod)",
             "Value": f"{round(m_productive * 100, 1)}%",
             "Target": f"≥ {round(target_prod * 100, 1)}%",
-            "Linguistic Indicator": "Lexical word-formative variation (Lemma Type-Token Ratio)"
+            "Status": get_min_status(m_productive, target_prod),
+            "Linguistic Indicator": "Lexical word-formative variation (Lemma MATTR)"
         },
         {
             "Markedness Type": "6. Stylistic (Mstyl)",
             "Value": f"{round(m_stylistic * 100, 1)}%",
             "Target": f"≥ {round(target_styl * 100, 1)}%",
+            "Status": get_min_status(m_stylistic, target_styl),
             "Linguistic Indicator": "Density of qualifying modifiers (ADJ and ADV tags)"
         },
         {
             "Markedness Type": "7. Statistical (Mstat)",
             "Value": f"{round(m_statistical * 100, 1)}%",
             "Target": f"≥ {round(target_stat * 100, 1)}%",
+            "Status": get_min_status(m_statistical, target_stat),
             "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
         }
     ]
     st.table(pd.DataFrame(markedness_data))
+
