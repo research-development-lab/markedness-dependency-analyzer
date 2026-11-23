@@ -101,7 +101,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.warning(
             f"⚠️ Word count notice: Your text has {total_tokens} words (corpus benchmark for Intro/LitReview is 700–3,000 words, centered at ~1,200 words)."
         )
-        elif "Full Text" in text_scope and (total_tokens < 700 or total_tokens > 7000):
+    elif "Full Text" in text_scope and (total_tokens < 700 or total_tokens > 7000):
         st.warning(
             f"⚠️ Word count notice: Your text has {total_tokens} words (recommended Full Text scope is 700–7,000 words)."
         )
