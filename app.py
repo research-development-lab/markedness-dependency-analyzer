@@ -230,13 +230,13 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     else:
         scope_label = "Full Text / Clean Sections"
    
-    # 4c. Языковая адаптация (Русский язык имеет более длинные дуги MDD и выше Msyn)
+    # 4c. Language-specific calibration (Russian exhibits longer MDD arcs and higher Msyn)
     if language_opt == "ru":
         mu_mdd += 0.20
         opt_mdd_min += 0.20
         opt_mdd_max += 0.20
         mu_syn += 0.015
-        mu_sem += 0.015  # В русском научном стиле выше доля отглагольных существительных
+        mu_sem += 0.015  # Higher share of deverbal nouns in Russian academic prose
 
     # 5. Full 7-Metric Two-Component PASI Calculation
     sigma_mdd = 0.35
