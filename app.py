@@ -185,22 +185,58 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     pasi_raw = 100.0 * (0.40 * syn_balance + 0.60 * markedness_density)
     pasi_score = round(max(5.0, min(pasi_raw, 100.0)), 1)
     
-    # 6. Smart diagnostics and actionable recommendations
+        # 6. Smart diagnostics and actionable recommendations (All 7 Metrics + MDD)
     issues = []
+
+    # --- A. Syntactic Balance Checks (MDD, Msyn, Mimp) ---
+    # 1. Mean Dependency Distance (MDD)
     if mdd < opt_mdd_min:
-        issues.append(f"Syntactic arcs are too short (MDD = {mdd} < {opt_mdd_min}): sentences appear fragmented.")
+        issues.append(f"Syntactic arcs are too short (MDD = {mdd} < {opt_mdd_min}): sentences appear fragmented; consider combining related clauses.")
     elif mdd > opt_mdd_max:
         issues.append(f"Cognitive overload detected (MDD = {mdd} > {opt_mdd_max}): break down overly long dependency chains.")
-        
-    if m_productive < target_prod:
-        issues.append(f"Low productive markedness (Mprod = {round(m_productive*100, 1)}%): reduce lexical repetition and diversify vocabulary.")
-    if m_stylistic < target_styl:
-        issues.append(f"Low stylistic markedness (Mstyl = {round(m_stylistic*100, 1)}%): add precise analytical qualifiers (adjectives/adverbs).")
-    if m_material < target_mat:
-        issues.append(f"Low medium-term density (Mmat = {round(m_material*100, 1)}%): enrich academic terminology (9–10 chars).")
-    if m_statistical < target_stat:
-        issues.append(f"Low composite density (Mstat = {round(m_statistical*100, 1)}%): include domain-specific compound terms (>10 chars).")
 
+    # 2. Abstract-Syntactic Markedness (Msyn) — corridor [mu_syn - sigma_syn, mu_syn + sigma_syn]
+    syn_low = max(0.0, mu_syn - sigma_syn)
+    syn_high = mu_syn + sigma_syn
+    if m_abstract_syntax < syn_low:
+        issues.append(f"Low abstract-syntactic complexity (Msyn = {round(m_abstract_syntax*100, 1)}% < {round(syn_low*100, 1)}%): incorporate more subordinate clauses, appositions, or participial constructions.")
+    elif m_abstract_syntax > syn_high:
+        issues.append(f"Excessive syntactic subordination (Msyn = {round(m_abstract_syntax*100, 1)}% > {round(syn_high*100, 1)}%): simplify heavily nested clauses to improve readability.")
+
+    # 3. Implicational Markedness (Mimp) — corridor [mu_imp - sigma_imp, mu_imp + sigma_imp]
+    imp_low = max(0.0, mu_imp - sigma_imp)
+    imp_high = mu_imp + sigma_imp
+    if m_implicational < imp_low:
+        issues.append(f"Flat syntactic hierarchy (Mimp = {round(m_implicational*100, 1)}% < {round(imp_low*100, 1)}%): expand phrase valency by adding dependent modifiers to key nodes.")
+    elif m_implicational > imp_high:
+        issues.append(f"Over-branched syntactic tree (Mimp = {round(m_implicational*100, 1)}% > {round(imp_high*100, 1)}%): reduce multi-level branching within single sentences.")
+
+    # --- B. Markedness Density Checks (Mprod, Mstyl, Mmat, Msem, Mstat) ---
+    # 4. Semantic Markedness (Msem) — corridor [mu_sem - sigma_sem, mu_sem + sigma_sem]
+    sem_low = max(0.0, mu_sem - sigma_sem)
+    sem_high = mu_sem + sigma_sem
+    if m_semantic < sem_low:
+        issues.append(f"Low nominal density (Msem = {round(m_semantic*100, 1)}% < {round(sem_low*100, 1)}%): increase conceptual density by using precise domain nouns.")
+    elif m_semantic > sem_high:
+        issues.append(f"Heavy nominalization detected (Msem = {round(m_semantic*100, 1)}% > {round(sem_high*100, 1)}%): replace bulky noun chains with active verbs to make the prose more dynamic.")
+
+    # 5. Productive Markedness (Mprod)
+    if m_productive < target_prod:
+        issues.append(f"Low productive markedness (Mprod = {round(m_productive*100, 1)}% < {round(target_prod*100, 1)}%): reduce lexical repetition and diversify vocabulary.")
+
+    # 6. Stylistic Markedness (Mstyl)
+    if m_stylistic < target_styl:
+        issues.append(f"Low stylistic markedness (Mstyl = {round(m_stylistic*100, 1)}% < {round(target_styl*100, 1)}%): add precise analytical qualifiers (adjectives/adverbs).")
+
+    # 7. Material Markedness (Mmat)
+    if m_material < target_mat:
+        issues.append(f"Low medium-term density (Mmat = {round(m_material*100, 1)}% < {round(target_mat*100, 1)}%): enrich academic terminology (9–10 chars).")
+
+    # 8. Statistical Markedness (Mstat)
+    if m_statistical < target_stat:
+        issues.append(f"Low composite density (Mstat = {round(m_statistical*100, 1)}% < {round(target_stat*100, 1)}%): include domain-specific compound terms (>10 chars).")
+
+    # --- Status & Recommendation Assembly ---
     if pasi_score >= 72.0 and len(issues) == 0:
         status = f"✓ High Academic Standard (Optimal Balance & Rich 7-Factor Markedness for {prof_name})"
         color_box = st.success
@@ -208,11 +244,16 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     elif pasi_score >= 58.0:
         status = f"⚠️ Moderate Academic Weight (Partial Imbalance in {prof_name})"
         color_box = st.warning
-        recommendation = "To increase scholarly impact before submission: " + " ".join(issues) if issues else "Refine lexical diversity and keep syntactic arcs tightly balanced."
+        if issues:
+            formatted_issues = "\n".join(f"- {issue}" for issue in issues)
+            recommendation = f"To increase scholarly impact before submission, address the following:\n{formatted_issues}"
+        else:
+            recommendation = "Refine lexical diversity and keep syntactic arcs tightly balanced."
     else:
-        status = f"❌ Low Academic Weight (Significant Structural or Lexical Deficit)"
+        status = "❌ Low Academic Weight (Significant Structural or Lexical Deficit)"
         color_box = st.error
-        recommendation = "Substantial revision recommended: " + " ".join(issues)
+        formatted_issues = "\n".join(f"- {issue}" for issue in issues)
+        recommendation = f"Substantial revision recommended:\n{formatted_issues}"
 
     # 7. UI Metrics & Report Rendering (Dynamic Corridors)
     st.subheader("📊 Multi-Factor Analysis Results")
