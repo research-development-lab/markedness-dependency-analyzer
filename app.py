@@ -37,7 +37,7 @@ st.title("AcademicWeight.AI: Multi-Factor Text Markedness Analysis")
 st.write("Analytical system for academic discourse alignment, syntactic dependency balance, and 7-dimensional markedness scoring.")
 
 text_input = st.text_area(
-    "Paste the abstract, introduction or full text of your research paper here:",
+    "Paste the abstract, introduction & Literature Review or full text of your research paper here:",
     value="",
     placeholder="Paste your academic abstract, introduction, or manuscript excerpt here (in English or Russian)...",
     height=180
@@ -69,7 +69,7 @@ with col_config_3:
         "Select text section / scope:",
         [
             "Full Text / Clean Sections (700–5,000+ words)",
-            "Introduction / Literature Review (700–3,000 words)",
+            "Introduction & Literature Review (700–3,000 words)",
             "Abstract (150–350 words)"
         ]
     )
