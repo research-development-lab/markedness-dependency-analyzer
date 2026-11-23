@@ -68,9 +68,9 @@ with col_config_3:
     text_scope = st.selectbox(
         "Select text section / scope:",
         [
-            "Full Text / Clean Sections (700–5,000+ words)",
+            "Abstract (150–350 words)",
             "Introduction & Literature Review (700–3,000 words)",
-            "Abstract (150–350 words)"
+            "Full Text / Clean Sections (700–7,000 words)"
         ]
     )
 
