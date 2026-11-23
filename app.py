@@ -43,7 +43,7 @@ text_input = st.text_area(
     height=180
 )
 
-col_config_1, col_config_2, col_config_3 = st.columns([1, 1.5, 1.2])
+col_config_1, col_config_2, col_config_3 = st.columns([1, 1.5, 1.3])
 with col_config_1:
     language_opt = st.selectbox(
         "Select the language of your text:", 
@@ -68,7 +68,7 @@ with col_config_3:
     text_scope = st.selectbox(
         "Select text section / scope:",
         [
-            "Full Text / Clean Sections (1,500–5,000+ words)",
+            "Full Text / Clean Sections (700–5,000+ words)",
             "Introduction / Literature Review (700–3,000 words)",
             "Abstract (150–350 words)"
         ]
@@ -76,7 +76,6 @@ with col_config_3:
 
 # 3. Main Analysis Execution Engine
 if st.button("Calculate 7 Types of Markedness & Academic Weight"):
-    # Fast pre-check before loading spaCy model
     if len(text_input.strip().split()) < 20:
         st.warning("Please enter at least 20 words for reliable syntactic and lexical analysis.")
         st.stop()
@@ -88,7 +87,11 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     tokens_words = [t for t in doc if t.is_alpha]
     total_tokens = len(tokens_words)
     
-    # Soft word-count validation against corpus calibration ranges
+    if total_tokens < 20:
+        st.warning("Please enter at least 20 valid words for reliable syntactic and lexical analysis.")
+        st.stop()
+
+    # Soft word-count validation against empirical corpus ranges
     if "Abstract" in text_scope and total_tokens > 400:
         st.warning(
             f"⚠️ Word count notice: You entered {total_tokens} words, which exceeds a typical Abstract (150–350 words). "
@@ -103,10 +106,6 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             f"⚠️ Word count notice: Your text has only {total_tokens} words (clean full-text corpus benchmark starts at 700+ words). "
             "If this is an abstract or short section, select the corresponding scope above."
         )
-
-    if total_tokens < 20:
-        st.warning("Please enter at least 20 valid words for reliable syntactic and lexical analysis.")
-        st.stop()
 
     # Language-specific word length thresholds
     if language_opt == "en":
@@ -168,57 +167,70 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     # 7. Statistical: extra-long specialized composites
     m_statistical = sum(1 for t in tokens_words if len(t.text) > stat_min) / total_tokens
     
-    # 4. Empirically calibrated discipline profiles (Base = Full Text)
+    # 4. Empirically calibrated discipline profiles (Base = Full Text / Clean Sections)
     if "Natural Sciences" in profile:
         mu_mdd, mu_syn, mu_imp = 2.15, 0.075, 0.470
         opt_mdd_min, opt_mdd_max = 1.85, 2.45
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.68, 0.125, 0.115, 0.095, 0.310
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.54, 0.125, 0.115, 0.095, 0.310
         prof_name = "natural sciences"
     elif "Engineering" in profile:
         mu_mdd, mu_syn, mu_imp = 2.10, 0.070, 0.465
         opt_mdd_min, opt_mdd_max = 1.80, 2.40
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.67, 0.120, 0.110, 0.090, 0.315
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.53, 0.120, 0.110, 0.090, 0.315
         prof_name = "engineering and IT"
     elif "Medical" in profile:
         mu_mdd, mu_syn, mu_imp = 2.20, 0.080, 0.475
         opt_mdd_min, opt_mdd_max = 1.90, 2.50
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.69, 0.130, 0.120, 0.100, 0.305
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.55, 0.130, 0.120, 0.100, 0.305
         prof_name = "medical and health sciences"
     elif "Agricultural" in profile:
         mu_mdd, mu_syn, mu_imp = 2.25, 0.080, 0.475
         opt_mdd_min, opt_mdd_max = 1.95, 2.55
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.68, 0.125, 0.105, 0.085, 0.300
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.54, 0.125, 0.105, 0.085, 0.300
         prof_name = "agricultural sciences"
     elif "Social Sciences" in profile:
         mu_mdd, mu_syn, mu_imp = 2.38, 0.085, 0.480
         opt_mdd_min, opt_mdd_max = 2.08, 2.68
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.70, 0.135, 0.105, 0.085, 0.295
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.56, 0.135, 0.105, 0.085, 0.295
         prof_name = "social sciences"
     else:
         mu_mdd, mu_syn, mu_imp = 2.42, 0.088, 0.485
         opt_mdd_min, opt_mdd_max = 2.12, 2.72
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.71, 0.135, 0.105, 0.090, 0.295
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.565, 0.135, 0.105, 0.090, 0.295
         prof_name = "humanities (Philology)"
 
-    # 4b. Calibration adjustments based on Text Scope (Abstract vs Lit Review vs Full Text)
-    if "Abstract" in text_scope:
-        # Abstracts are lexically denser, higher in nominalization and terms, slightly higher MATTR
-        mu_sem += 0.025
-        target_mat += 0.010
-        target_stat += 0.010
-        target_prod += 0.030
-        target_styl -= 0.005
-        scope_label = "Abstract"
-    elif "Introduction" in text_scope:
-        # Introductions / Lit Reviews have higher syntactic subordination and slightly broader lexical diversity
-        mu_syn += 0.012
-        mu_mdd += 0.10
-        opt_mdd_min += 0.10
-        opt_mdd_max += 0.10
-        target_prod += 0.015
+    # 4b. Calibration adjustments based on Text Scope & Empirical Corpus Benchmarks
+    if "Introduction" in text_scope:
         scope_label = "Introduction / Literature Review"
+        if "Humanities" in profile:
+            # Exact empirical calibration from OpenAlex_Philology_IntroLitReview_EN_2021_2023 (Cited M)
+            mu_mdd = 2.540
+            opt_mdd_min, opt_mdd_max = 2.25, 2.83
+            mu_syn = 0.1116       # Cited M = 11.16%
+            mu_imp = 0.4683       # Cited M = 46.83%
+            mu_sem = 0.2517       # Cited M = 25.17%
+            target_prod = 0.585   # Threshold calibrated against Cited M (60.42%) vs Uncited M (57.86%)
+            target_styl = 0.125   # Threshold calibrated against Cited M (12.96%) vs Uncited M (12.12%)
+            target_mat = 0.100    # Threshold calibrated against Cited M (10.21%) vs Uncited M (9.85%)
+            target_stat = 0.072   # Threshold calibrated against Cited M (7.33%) vs Uncited M (6.92%)
+        else:
+            mu_mdd += 0.12
+            opt_mdd_min += 0.12
+            opt_mdd_max += 0.12
+            mu_syn += 0.020
+            mu_sem -= 0.035
+            target_prod += 0.020
+            target_stat -= 0.015
+
+    elif "Abstract" in text_scope:
+        scope_label = "Abstract"
+    elif "Abstract" in text_scope:
+        scope_label = "Abstract"
+        # Realistic calibration for Abstracts (150-350 words) with MATTR window=50
+        mu_sem += 0.015
+        target_prod = 0.650
     else:
-        scope_label = "Full Text"
+        scope_label = "Full Text / Clean Sections"
 
     # 5. Full 7-Metric Two-Component PASI Calculation
     sigma_mdd = 0.35
@@ -320,7 +332,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         recommendation = f"Substantial revision recommended:\n{formatted_issues}"
 
     # 7. UI Metrics & Report Rendering
-    st.subheader(f"📊 Multi-Factor Analysis Results ({total_tokens} valid words analyzed)")
+    st.subheader(f"📊 Multi-Factor Analysis Results ({total_tokens} valid words | MATTR window = {window_size})")
     col_res_1, col_res_2, col_res_3 = st.columns([2, 1, 1])
     
     syn_min = round(max(0.0, (mu_syn - sigma_syn) * 100), 1)
@@ -385,7 +397,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Value": f"{round(m_productive * 100, 1)}%",
             "Target": f"≥ {round(target_prod * 100, 1)}%",
             "Status": get_min_status(m_productive, target_prod),
-            "Linguistic Indicator": "Lexical word-formative variation (Lemma MATTR, window=50)"
+            "Linguistic Indicator": f"Lexical word-formative variation (Lemma MATTR, window={window_size})"
         },
         {
             "Markedness Type": "6. Stylistic (Mstyl)",
