@@ -224,8 +224,6 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
 
     elif "Abstract" in text_scope:
         scope_label = "Abstract"
-    elif "Abstract" in text_scope:
-        scope_label = "Abstract"
         # Realistic calibration for Abstracts (150-350 words) with MATTR window=50
         mu_sem += 0.015
         target_prod = 0.650
