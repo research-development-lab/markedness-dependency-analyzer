@@ -43,7 +43,7 @@ text_input = st.text_area(
     height=180
 )
 
-col_config_1, col_config_2 = st.columns(2)
+col_config_1, col_config_2, col_config_3 = st.columns([1, 1.5, 1.2])
 with col_config_1:
     language_opt = st.selectbox(
         "Select the language of your text:", 
@@ -64,26 +64,54 @@ with col_config_2:
         ]
     )
 
+with col_config_3:
+    text_scope = st.selectbox(
+        "Select text section / scope:",
+        [
+            "Full Text (Complete Paper)",
+            "Abstract (150–300 words)",
+            "Introduction / Literature Review"
+        ]
+    )
+
 # 3. Main Analysis Execution Engine
 if st.button("Calculate 7 Types of Markedness & Academic Weight"):
+    # Fast pre-check before loading spaCy model
+    if len(text_input.strip().split()) < 20:
+        st.warning("Please enter at least 20 words for reliable syntactic and lexical analysis.")
+        st.stop()
+
     nlp = load_spacy_model(language_opt)
     doc = nlp(text_input)
     
-    tokens_no_punct = [t for t in doc if not t.is_punct and not t.is_space]
-    total_tokens = len(tokens_no_punct)
+    # Filter strictly alphabetic word tokens (excludes numbers, URLs, DOIs, citations)
+    tokens_words = [t for t in doc if t.is_alpha]
+    total_tokens = len(tokens_words)
     
     if total_tokens < 20:
-        st.warning("Please enter at least 20 words for reliable syntactic and lexical analysis.")
+        st.warning("Please enter at least 20 valid words for reliable syntactic and lexical analysis.")
         st.stop()
+
+    # Language-specific word length thresholds
+    if language_opt == "en":
+        mat_min, mat_max = 9, 10
+        stat_min = 10
+        mat_label = "9–10 characters"
+        stat_label = ">10 characters"
+    else:
+        mat_min, mat_max = 10, 12
+        stat_min = 12
+        mat_label = "10–12 characters"
+        stat_label = ">12 characters"
     
     # --- Extraction of 7 Core Non-Overlapping Metrics ---
-    # 1. Material: medium-long academic terms (9-10 chars)
-    m_material = sum(1 for t in tokens_no_punct if 9 <= len(t.text) <= 10) / total_tokens
+    # 1. Material: medium-long academic terms
+    m_material = sum(1 for t in tokens_words if mat_min <= len(t.text) <= mat_max) / total_tokens
     # 2. Semantic: nominal density (NOUN tag)
-    m_semantic = sum(1 for t in tokens_no_punct if t.pos_ == "NOUN") / total_tokens
+    m_semantic = sum(1 for t in tokens_words if t.pos_ == "NOUN") / total_tokens
     # 3. Implicational: hierarchical valency depth
     m_implicational = sum(
-        1 for t in tokens_no_punct if t.head != t and any(not c.is_punct for c in t.children)
+        1 for t in tokens_words if t.head != t and any(c.is_alpha for c in t.children)
     ) / total_tokens
     
     # 4. Abstract-Syntactic (Msyn / MR) and MDD
@@ -93,7 +121,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     num_rel = 0
     
     for sent in doc.sents:
-        sent_words = [t for t in sent if not t.is_punct and not t.is_space]
+        sent_words = [t for t in sent if t.is_alpha]
         word_idx_map = {t.i: idx for idx, t in enumerate(sent_words)}
         
         for token in sent_words:
@@ -106,9 +134,9 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     mdd = round(total_dist / num_rel, 3) if num_rel > 0 else 0.0
     m_abstract_syntax = syntax_marked_cnt / num_rel if num_rel > 0 else 0.0
     
-        # 5. Productive: Length-Invariant Lemma MATTR (Moving-Average Type-Token Ratio, window = 200)
-    lemmas = [t.lemma_.lower() for t in tokens_no_punct]
-    window_size = 200
+    # 5. Productive: Length-Invariant Lemma MATTR (window = 50 for scale invariance across Abstracts & Full Texts)
+    lemmas = [t.lemma_.lower() for t in tokens_words]
+    window_size = 50
     if total_tokens <= window_size:
         m_productive = len(set(lemmas)) / total_tokens
     else:
@@ -117,42 +145,63 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             for i in range(total_tokens - window_size + 1)
         ]
         m_productive = sum(ttr_windows) / len(ttr_windows)
+
     # 6. Stylistic: qualifying modifiers (ADJ, ADV)
-    m_stylistic = sum(1 for t in tokens_no_punct if t.pos_ in ["ADJ", "ADV"]) / total_tokens
-    # 7. Statistical: extra-long specialized composites (>10 chars)
-    m_statistical = sum(1 for t in tokens_no_punct if len(t.text) > 10) / total_tokens
+    m_stylistic = sum(1 for t in tokens_words if t.pos_ in ["ADJ", "ADV"]) / total_tokens
+    # 7. Statistical: extra-long specialized composites
+    m_statistical = sum(1 for t in tokens_words if len(t.text) > stat_min) / total_tokens
     
-    # 4. Empirically calibrated discipline profiles
+    # 4. Empirically calibrated discipline profiles (Base = Full Text)
     if "Natural Sciences" in profile:
         mu_mdd, mu_syn, mu_imp = 2.15, 0.075, 0.470
         opt_mdd_min, opt_mdd_max = 1.85, 2.45
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.54, 0.125, 0.115, 0.095, 0.310
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.68, 0.125, 0.115, 0.095, 0.310
         prof_name = "natural sciences"
     elif "Engineering" in profile:
         mu_mdd, mu_syn, mu_imp = 2.10, 0.070, 0.465
         opt_mdd_min, opt_mdd_max = 1.80, 2.40
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.53, 0.120, 0.110, 0.090, 0.315
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.67, 0.120, 0.110, 0.090, 0.315
         prof_name = "engineering and IT"
     elif "Medical" in profile:
         mu_mdd, mu_syn, mu_imp = 2.20, 0.080, 0.475
         opt_mdd_min, opt_mdd_max = 1.90, 2.50
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.55, 0.130, 0.120, 0.100, 0.305
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.69, 0.130, 0.120, 0.100, 0.305
         prof_name = "medical and health sciences"
     elif "Agricultural" in profile:
         mu_mdd, mu_syn, mu_imp = 2.25, 0.080, 0.475
         opt_mdd_min, opt_mdd_max = 1.95, 2.55
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.54, 0.125, 0.105, 0.085, 0.300
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.68, 0.125, 0.105, 0.085, 0.300
         prof_name = "agricultural sciences"
     elif "Social Sciences" in profile:
         mu_mdd, mu_syn, mu_imp = 2.38, 0.085, 0.480
         opt_mdd_min, opt_mdd_max = 2.08, 2.68
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.56, 0.135, 0.105, 0.085, 0.295
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.70, 0.135, 0.105, 0.085, 0.295
         prof_name = "social sciences"
     else:
         mu_mdd, mu_syn, mu_imp = 2.42, 0.088, 0.485
         opt_mdd_min, opt_mdd_max = 2.12, 2.72
-        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.565, 0.135, 0.105, 0.090, 0.295
+        target_prod, target_styl, target_mat, target_stat, mu_sem = 0.71, 0.135, 0.105, 0.090, 0.295
         prof_name = "humanities (Philology)"
+
+    # 4b. Calibration adjustments based on Text Scope (Abstract vs Lit Review vs Full Text)
+    if "Abstract" in text_scope:
+        # Abstracts are lexically denser, higher in nominalization and terms, slightly higher MATTR
+        mu_sem += 0.025
+        target_mat += 0.010
+        target_stat += 0.010
+        target_prod += 0.030
+        target_styl -= 0.005
+        scope_label = "Abstract"
+    elif "Introduction" in text_scope:
+        # Introductions / Lit Reviews have higher syntactic subordination and slightly broader lexical diversity
+        mu_syn += 0.012
+        mu_mdd += 0.10
+        opt_mdd_min += 0.10
+        opt_mdd_max += 0.10
+        target_prod += 0.015
+        scope_label = "Introduction / Literature Review"
+    else:
+        scope_label = "Full Text"
 
     # 5. Full 7-Metric Two-Component PASI Calculation
     sigma_mdd = 0.35
@@ -185,64 +234,62 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
     pasi_raw = 100.0 * (0.40 * syn_balance + 0.60 * markedness_density)
     pasi_score = round(max(5.0, min(pasi_raw, 100.0)), 1)
     
-        # 6. Smart diagnostics and actionable recommendations (All 7 Metrics + MDD)
+    # 6. Smart diagnostics and actionable recommendations (All 7 Metrics + MDD)
     issues = []
 
-    # --- A. Syntactic Balance Checks (MDD, Msyn, Mimp) ---
     # 1. Mean Dependency Distance (MDD)
     if mdd < opt_mdd_min:
-        issues.append(f"Syntactic arcs are too short (MDD = {mdd} < {opt_mdd_min}): sentences appear fragmented; consider combining related clauses.")
+        issues.append(f"Syntactic arcs are too short (MDD = {mdd} < {round(opt_mdd_min, 2)}): sentences appear fragmented; consider combining related clauses.")
     elif mdd > opt_mdd_max:
-        issues.append(f"Cognitive overload detected (MDD = {mdd} > {opt_mdd_max}): break down overly long dependency chains.")
+        issues.append(f"Cognitive overload detected (MDD = {mdd} > {round(opt_mdd_max, 2)}): break down overly long dependency chains.")
 
-    # 2. Abstract-Syntactic Markedness (Msyn) — corridor [mu_syn - sigma_syn, mu_syn + sigma_syn]
+    # 2. Abstract-Syntactic Markedness (Msyn)
     syn_low = max(0.0, mu_syn - sigma_syn)
     syn_high = mu_syn + sigma_syn
     if m_abstract_syntax < syn_low:
-        issues.append(f"Low abstract-syntactic complexity (Msyn = {round(m_abstract_syntax*100, 1)}% < {round(syn_low*100, 1)}%): incorporate more subordinate clauses, appositions, or participial constructions.")
+        issues.append(f"Low abstract-syntactic complexity (Msyn = {round(m_abstract_syntax * 100, 1)}% < {round(syn_low * 100, 1)}%): incorporate more subordinate clauses, appositions, or participial constructions.")
     elif m_abstract_syntax > syn_high:
-        issues.append(f"Excessive syntactic subordination (Msyn = {round(m_abstract_syntax*100, 1)}% > {round(syn_high*100, 1)}%): simplify heavily nested clauses to improve readability.")
+        issues.append(f"Excessive syntactic subordination (Msyn = {round(m_abstract_syntax * 100, 1)}% > {round(syn_high * 100, 1)}%): simplify heavily nested clauses to improve readability.")
 
-    # 3. Implicational Markedness (Mimp) — corridor [mu_imp - sigma_imp, mu_imp + sigma_imp]
+    # 3. Implicational Markedness (Mimp)
     imp_low = max(0.0, mu_imp - sigma_imp)
     imp_high = mu_imp + sigma_imp
     if m_implicational < imp_low:
-        issues.append(f"Flat syntactic hierarchy (Mimp = {round(m_implicational*100, 1)}% < {round(imp_low*100, 1)}%): expand phrase valency by adding dependent modifiers to key nodes.")
+        issues.append(f"Flat syntactic hierarchy (Mimp = {round(m_implicational * 100, 1)}% < {round(imp_low * 100, 1)}%): expand phrase valency by adding dependent modifiers to key nodes.")
     elif m_implicational > imp_high:
-        issues.append(f"Over-branched syntactic tree (Mimp = {round(m_implicational*100, 1)}% > {round(imp_high*100, 1)}%): reduce multi-level branching within single sentences.")
+        issues.append(f"Over-branched syntactic tree (Mimp = {round(m_implicational * 100, 1)}% > {round(imp_high * 100, 1)}%): reduce multi-level branching within single sentences.")
 
-    # --- B. Markedness Density Checks (Mprod, Mstyl, Mmat, Msem, Mstat) ---
-    # 4. Semantic Markedness (Msem) — corridor [mu_sem - sigma_sem, mu_sem + sigma_sem]
+    # 4. Semantic Markedness (Msem)
     sem_low = max(0.0, mu_sem - sigma_sem)
     sem_high = mu_sem + sigma_sem
     if m_semantic < sem_low:
-        issues.append(f"Low nominal density (Msem = {round(m_semantic*100, 1)}% < {round(sem_low*100, 1)}%): increase conceptual density by using precise domain nouns.")
+        issues.append(f"Low nominal density (Msem = {round(m_semantic * 100, 1)}% < {round(sem_low * 100, 1)}%): increase conceptual density by using precise domain nouns.")
     elif m_semantic > sem_high:
-        issues.append(f"Heavy nominalization detected (Msem = {round(m_semantic*100, 1)}% > {round(sem_high*100, 1)}%): replace bulky noun chains with active verbs to make the prose more dynamic.")
+        issues.append(f"Heavy nominalization detected (Msem = {round(m_semantic * 100, 1)}% > {round(sem_high * 100, 1)}%): replace bulky noun chains with active verbs to make the prose more dynamic.")
 
     # 5. Productive Markedness (Mprod)
     if m_productive < target_prod:
-        issues.append(f"Low productive markedness (Mprod = {round(m_productive*100, 1)}% < {round(target_prod*100, 1)}%): reduce lexical repetition and diversify vocabulary.")
+        issues.append(f"Low productive markedness (Mprod = {round(m_productive * 100, 1)}% < {round(target_prod * 100, 1)}%): reduce lexical repetition and diversify vocabulary.")
 
     # 6. Stylistic Markedness (Mstyl)
     if m_stylistic < target_styl:
-        issues.append(f"Low stylistic markedness (Mstyl = {round(m_stylistic*100, 1)}% < {round(target_styl*100, 1)}%): add precise analytical qualifiers (adjectives/adverbs).")
+        issues.append(f"Low stylistic markedness (Mstyl = {round(m_stylistic * 100, 1)}% < {round(target_styl * 100, 1)}%): add precise analytical qualifiers (adjectives/adverbs).")
 
     # 7. Material Markedness (Mmat)
     if m_material < target_mat:
-        issues.append(f"Low medium-term density (Mmat = {round(m_material*100, 1)}% < {round(target_mat*100, 1)}%): enrich academic terminology (9–10 chars).")
+        issues.append(f"Low medium-term density (Mmat = {round(m_material * 100, 1)}% < {round(target_mat * 100, 1)}%): enrich academic terminology ({mat_label}).")
 
     # 8. Statistical Markedness (Mstat)
     if m_statistical < target_stat:
-        issues.append(f"Low composite density (Mstat = {round(m_statistical*100, 1)}% < {round(target_stat*100, 1)}%): include domain-specific compound terms (>10 chars).")
+        issues.append(f"Low composite density (Mstat = {round(m_statistical * 100, 1)}% < {round(target_stat * 100, 1)}%): include domain-specific compound terms ({stat_label}).")
 
     # --- Status & Recommendation Assembly ---
     if pasi_score >= 72.0 and len(issues) == 0:
-        status = f"✓ High Academic Standard (Optimal Balance & Rich 7-Factor Markedness for {prof_name})"
+        status = f"✓ High Academic Standard (Optimal Balance & Rich 7-Factor Markedness for {prof_name} — {scope_label})"
         color_box = st.success
         recommendation = "Excellent balance across all 7 markedness dimensions and syntactic dependency mapping."
     elif pasi_score >= 58.0:
-        status = f"⚠️ Moderate Academic Weight (Partial Imbalance in {prof_name})"
+        status = f"⚠️ Moderate Academic Weight (Partial Imbalance in {prof_name} — {scope_label})"
         color_box = st.warning
         if issues:
             formatted_issues = "\n".join(f"- {issue}" for issue in issues)
@@ -250,13 +297,13 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         else:
             recommendation = "Refine lexical diversity and keep syntactic arcs tightly balanced."
     else:
-        status = "❌ Low Academic Weight (Significant Structural or Lexical Deficit)"
+        status = f"❌ Low Academic Weight (Significant Structural or Lexical Deficit — {scope_label})"
         color_box = st.error
         formatted_issues = "\n".join(f"- {issue}" for issue in issues)
         recommendation = f"Substantial revision recommended:\n{formatted_issues}"
 
-    # 7. UI Metrics & Report Rendering (Dynamic Corridors)
-    st.subheader("📊 Multi-Factor Analysis Results")
+    # 7. UI Metrics & Report Rendering
+    st.subheader(f"📊 Multi-Factor Analysis Results ({total_tokens} valid words analyzed)")
     col_res_1, col_res_2, col_res_3 = st.columns([2, 1, 1])
     
     syn_min = round(max(0.0, (mu_syn - sigma_syn) * 100), 1)
@@ -268,17 +315,14 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
         st.info(f"💡 **Actionable Feedback:** {recommendation}")
         
     with col_res_2:
-        st.metric("Mean Dependency Distance (MDD)", f"{mdd} tokens", help=f"Optimal corridor for {prof_name}: {opt_mdd_min} - {opt_mdd_max}")
-        st.metric("Abstract-Syntactic Ratio (Msyn / MR)", f"{round(m_abstract_syntax * 100, 1)}%", help=f"Optimal corridor for {prof_name}: {syn_min}% - {syn_max}%")
+        st.metric("Mean Dependency Distance (MDD)", f"{mdd} tokens", help=f"Optimal corridor for {prof_name} ({scope_label}): {round(opt_mdd_min, 2)} - {round(opt_mdd_max, 2)}")
+        st.metric("Abstract-Syntactic Ratio (Msyn / MR)", f"{round(m_abstract_syntax * 100, 1)}%", help=f"Optimal corridor for {prof_name} ({scope_label}): {syn_min}% - {syn_max}%")
     with col_res_3:
         st.metric("Syntactic Balance Index", f"{round(syn_balance * 100, 1)}%")
         st.metric("Markedness Density Index", f"{round(markedness_density * 100, 1)}%")
-        # Syntactic & Semantic Profile (Synchronized with 7-Factor Diagnostics)
-    st.subheader("📋 7-Dimensional Syntactic & Semantic Markedness Profile")
 
-    sem_low, sem_high = max(0.0, mu_sem - sigma_sem), mu_sem + sigma_sem
-    imp_low, imp_high = max(0.0, mu_imp - sigma_imp), mu_imp + sigma_imp
-    syn_low, syn_high = max(0.0, mu_syn - sigma_syn), mu_syn + sigma_syn
+    # Syntactic & Semantic Profile
+    st.subheader("📋 7-Dimensional Syntactic & Semantic Markedness Profile")
 
     def get_range_status(val, low, high):
         if val < low:
@@ -296,7 +340,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Value": f"{round(m_material * 100, 1)}%",
             "Target": f"≥ {round(target_mat * 100, 1)}%",
             "Status": get_min_status(m_material, target_mat),
-            "Linguistic Indicator": "Medium-long academic terms (9–10 characters)"
+            "Linguistic Indicator": f"Medium-long academic terms ({mat_label})"
         },
         {
             "Markedness Type": "2. Semantic (Msem)",
@@ -324,7 +368,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Value": f"{round(m_productive * 100, 1)}%",
             "Target": f"≥ {round(target_prod * 100, 1)}%",
             "Status": get_min_status(m_productive, target_prod),
-            "Linguistic Indicator": "Lexical word-formative variation (Lemma MATTR)"
+            "Linguistic Indicator": "Lexical word-formative variation (Lemma MATTR, window=50)"
         },
         {
             "Markedness Type": "6. Stylistic (Mstyl)",
@@ -338,8 +382,7 @@ if st.button("Calculate 7 Types of Markedness & Academic Weight"):
             "Value": f"{round(m_statistical * 100, 1)}%",
             "Target": f"≥ {round(target_stat * 100, 1)}%",
             "Status": get_min_status(m_statistical, target_stat),
-            "Linguistic Indicator": "Concentration of extra-long specialized composites (>10 characters)"
+            "Linguistic Indicator": f"Concentration of extra-long specialized composites ({stat_label})"
         }
     ]
     st.table(pd.DataFrame(markedness_data))
-
